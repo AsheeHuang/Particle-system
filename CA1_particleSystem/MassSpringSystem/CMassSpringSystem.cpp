@@ -556,7 +556,16 @@ void CMassSpringSystem::BallToBallCollision()
 		}
 	}
 }
+bool isInTheNet(Vector3d pos){
+	double x = pos.x;
+	double y = pos.y;
+	double z = pos.z;
 
+	if (x > 0 && x < 3 && z > 0 && z < 3)
+		return true;
+	else
+		return false;
+}
 void CMassSpringSystem::BallNetCollision()
 {
     static const double eEPSILON = 0.01;
@@ -564,21 +573,26 @@ void CMassSpringSystem::BallNetCollision()
 	for (int b1Idx = 0 ; b1Idx < BallNum(); b1Idx++){
 		Ball* b = &m_Balls[b1Idx];
 		Vector3d b_pos = b->GetPosition();
+	
 		for (int pIdx = 0; pIdx < m_GoalNet.ParticleNum(); pIdx++){
 			CParticle* p = &m_GoalNet.GetParticle(pIdx);
 			Vector3d p_pos = p->GetPosition();
-			if ((b_pos - p_pos).Length() - b->GetRadius() < eEPSILON  ){
+			Vector3d N = p->GetNormal();
+			if (isInTheNet(b_pos) == false)
+				N = -N;
+
+			if ((b_pos - p_pos).Length() - b->GetRadius() < eEPSILON && N.DotProduct(b->GetVelocity()) < 0){
 				Vector3d v1 = p->GetVelocity();
 				Vector3d v2 = b->GetVelocity();
 				Vector3d v1_n = v1.DotProduct(p_pos - b_pos) * (p_pos - b_pos);
-				Vector3d v2_n = v2.DotProduct(b_pos - p_pos) * (b_pos - p_pos);
+				Vector3d v2_n = v2.DotProduct(N) * N;
 				Vector3d v1_t = v1 - v1_n;
 				Vector3d v2_t = v2 - v2_n;
 				double m1 = p->GetMass();
 				double m2 = b->GetMass();
 
 				p->SetVelocity((v1_n*(m1 - m2) + 2 * m2 * v2_n) / (m1 + m2) + v1_t);
-				b->SetVelocity((v2_n*(m2 - m1) + 2 * m1 * v1_n) / (m1 + m2) + v2_t);
+				b->SetVelocity(-0.3*v2_n + 0.5*v2_t);
 				
 			}
 		}

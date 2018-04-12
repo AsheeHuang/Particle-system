@@ -292,6 +292,27 @@ void GoalNet::InitializeParticle()
                     {
                         Particle.SetMovable(false);
                     }
+					if (i == 0) {
+						Particle.ResetNormal();
+						Particle.AddToNormal(Vector3d::UNIT_X);
+					}
+					if (i == m_NumAtWidth -1 ){
+						Particle.ResetNormal();
+						Particle.AddToNormal(-Vector3d::UNIT_X);
+					}
+					if (k == 0){
+						Particle.ResetNormal();
+						Particle.AddToNormal(Vector3d::UNIT_Z);
+					}
+					if (k == m_NumAtLength-1){
+						Particle.ResetNormal();
+						//cout << i << " " << j << " " << k << endl;
+						Particle.AddToNormal(-Vector3d::UNIT_Z);
+					}
+					if (j == 0){
+						Particle.AddToNormal(Vector3d::UNIT_Y);
+					}
+					
                     m_Particles.push_back(Particle);
                     int cuboidIdx = i*numAtBack + j*m_NumAtLength + k;
                     m_ParticleIdMap.insert( 
