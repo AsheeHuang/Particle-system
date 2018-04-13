@@ -592,8 +592,7 @@ void CMassSpringSystem::BallNetCollision()
 				double m2 = b->GetMass();
 
 				p->SetVelocity((v1_n*(m1 - m2) + 2 * m2 * v2_n) / (m1 + m2) + v1_t);
-				b->SetVelocity(-0.3*v2_n + 0.5*v2_t);
-				
+				b->SetVelocity(-0.5*v2_n + 0.3*v2_t);
 			}
 		}
 	}
@@ -653,8 +652,6 @@ void CMassSpringSystem::ExplicitEuler()
 void CMassSpringSystem::RungeKutta()
 {
     //TO DO 7
-    BallNetCollision();
-    BallToBallCollision();
     ParticleRungeKutta();
     BallRungeKutta();
 }
@@ -678,7 +675,7 @@ void CMassSpringSystem::ParticleRungeKutta()
 	
 	for (int pIdx = 0; pIdx < m_GoalNet.ParticleNum(); pIdx++){
 		CParticle* p = &m_GoalNet.GetParticle(pIdx);
-		
+		//cout << p->GetForce() << endl;
 		//p->AddVelocity(m_dDeltaT * p->GetAcceleration());
 		Vector3d pos = p->GetPosition();
 		Vector3d vel = p->GetVelocity();
@@ -687,25 +684,46 @@ void CMassSpringSystem::ParticleRungeKutta()
 		curVelCntr.push_back(vel);
 
 		//k1
+		CParticle p1 = m_GoalNet.GetParticle(pIdx);
 		Vector3d k1_deltaPos = m_dDeltaT * vel;
 		Vector3d k1_deltaVel = m_dDeltaT * acc;
 		StateStep k1_s = StateStep(k1_deltaPos,k1_deltaVel);
+		p1.AddPosition(k1_deltaPos);
+		p1.AddVelocity(k1_deltaVel);
 		k1StepCntr.push_back(k1_s);
 		//k2
-		Vector3d k2_deltaPos = k1_deltaPos / 2;
-		Vector3d k2_deltaVel = k1_deltaVel / 2;
+		CParticle p2 = m_GoalNet.GetParticle(pIdx);
+		Vector3d vel2 = p1.GetVelocity();
+		Vector3d acc2 = p1.GetAcceleration();
+
+		Vector3d k2_deltaPos = vel2 / 2 * m_dDeltaT;
+		Vector3d k2_deltaVel = acc2 / 2 * m_dDeltaT;
 		StateStep k2_s = StateStep(k2_deltaPos, k2_deltaVel);
+		p2.AddPosition(k2_deltaPos);
+		p2.AddVelocity(k2_deltaVel);
 		k2StepCntr.push_back(k2_s);
 		//k3
-		Vector3d k3_deltaPos = k2_deltaPos / 2;
-		Vector3d k3_deltaVel = k2_deltaVel / 2;
+		CParticle p3 = m_GoalNet.GetParticle(pIdx);
+		Vector3d vel3 = p2.GetVelocity();
+		Vector3d acc3 = p2.GetAcceleration();
+
+		Vector3d k3_deltaPos = vel3 / 2 * m_dDeltaT;
+		Vector3d k3_deltaVel = acc3 / 2 * m_dDeltaT;
 		StateStep k3_s = StateStep(k3_deltaPos, k3_deltaVel);
+		p3.AddPosition(k3_deltaPos);
+		p3.AddVelocity(k3_deltaVel);
 		k3StepCntr.push_back(k3_s);
 		//k4
-		Vector3d k4_deltaPos = k3_deltaPos ;
-		Vector3d k4_deltaVel = k3_deltaVel ;
+		CParticle p4 = m_GoalNet.GetParticle(pIdx);
+		Vector3d vel4 = p3.GetVelocity();
+		Vector3d acc4 = p3.GetAcceleration();
+
+		Vector3d k4_deltaPos = vel4 * m_dDeltaT ;
+		Vector3d k4_deltaVel = acc4 * m_dDeltaT;
 		StateStep k4_s = StateStep(k4_deltaPos, k4_deltaVel);
 		k4StepCntr.push_back(k4_s);
+		p4.AddPosition(k4_deltaPos);
+		p4.AddVelocity(k4_deltaVel);
 
 		//CParticle* p = &m_GoalNet.GetParticle(pIdx);
 		
@@ -716,14 +734,15 @@ void CMassSpringSystem::ParticleRungeKutta()
 		Vector3d k2_p = k2StepCntr[pIdx].deltaPos;
 		Vector3d k3_p = k3StepCntr[pIdx].deltaPos;
 		Vector3d k4_p = k4StepCntr[pIdx].deltaPos;
-		Vector3d delta_p = (k1_p + 2 * k2_p + 2 * k3_p + k4_p) / 3;
+		//cout << k1_p << " " << k2_p << " " << k3_p << " " << k4_p << endl;
+		Vector3d delta_p = (k1_p + 2 * k2_p + 2 * k3_p + k4_p)/4 ;
 		p->AddPosition(delta_p);
 		//cout << delta_p.x << " " << delta_p.y << " " << delta_p.z << endl;
 		Vector3d k1_v = k1StepCntr[pIdx].deltaVel;
 		Vector3d k2_v = k2StepCntr[pIdx].deltaVel;
 		Vector3d k3_v = k3StepCntr[pIdx].deltaVel;
 		Vector3d k4_v = k4StepCntr[pIdx].deltaVel;
-		Vector3d delta_v = (k1_v + 2 * k2_v + 2 * k3_v + k4_v) / 3;
+		Vector3d delta_v = (k1_v + 2 * k2_v + 2 * k3_v + k4_v)/4;
 		//cout << delta_v.x << " " << delta_v.y << " " << delta_v.z << endl;
 		p->AddVelocity(delta_v);
 	}
@@ -758,27 +777,47 @@ void CMassSpringSystem::BallRungeKutta()
 		curVelCntr.push_back(vel);
 
 		//k1
+		Ball p1 = m_Balls[pIdx];
 		Vector3d k1_deltaPos = m_dDeltaT * vel;
 		Vector3d k1_deltaVel = m_dDeltaT * acc;
 		StateStep k1_s = StateStep(k1_deltaPos, k1_deltaVel);
+		p1.AddPosition(k1_deltaPos);
+		p1.AddVelocity(k1_deltaVel);
 		k1StepCntr.push_back(k1_s);
 		//k2
-		Vector3d k2_deltaPos = k1_deltaPos / 2;
-		Vector3d k2_deltaVel = k1_deltaVel / 2;
+		Ball p2 = m_Balls[pIdx];
+		Vector3d vel2 = p1.GetVelocity();
+		Vector3d acc2 = p1.GetAcceleration();
+
+		Vector3d k2_deltaPos = vel2 / 2 * m_dDeltaT;
+		Vector3d k2_deltaVel = acc2 / 2 * m_dDeltaT;
 		StateStep k2_s = StateStep(k2_deltaPos, k2_deltaVel);
+		p2.AddPosition(k2_deltaPos);
+		p2.AddVelocity(k2_deltaVel);
 		k2StepCntr.push_back(k2_s);
 		//k3
-		Vector3d k3_deltaPos = k2_deltaPos / 2;
-		Vector3d k3_deltaVel = k2_deltaVel / 2;
+		Ball p3 = m_Balls[pIdx];
+		Vector3d vel3 = p2.GetVelocity();
+		Vector3d acc3 = p2.GetAcceleration();
+
+		Vector3d k3_deltaPos = vel3 / 2 * m_dDeltaT;
+		Vector3d k3_deltaVel = acc3 / 2 * m_dDeltaT;
 		StateStep k3_s = StateStep(k3_deltaPos, k3_deltaVel);
+		p3.AddPosition(k3_deltaPos);
+		p3.AddVelocity(k3_deltaVel);
 		k3StepCntr.push_back(k3_s);
 		//k4
-		Vector3d k4_deltaPos = k3_deltaPos;
-		Vector3d k4_deltaVel = k3_deltaVel;
+		Ball p4 = m_Balls[pIdx];
+		Vector3d vel4 = p3.GetVelocity();
+		Vector3d acc4 = p3.GetAcceleration();
+
+		Vector3d k4_deltaPos = vel4 * m_dDeltaT;
+		Vector3d k4_deltaVel = acc4 * m_dDeltaT;
 		StateStep k4_s = StateStep(k4_deltaPos, k4_deltaVel);
 		k4StepCntr.push_back(k4_s);
+		p4.AddPosition(k4_deltaPos);
+		p4.AddVelocity(k4_deltaVel);
 
-		//CParticle* p = &m_GoalNet.GetParticle(pIdx);
 
 	}
 	for (int pIdx = 0; pIdx < BallNum(); pIdx++){
@@ -787,14 +826,14 @@ void CMassSpringSystem::BallRungeKutta()
 		Vector3d k2_p = k2StepCntr[pIdx].deltaPos;
 		Vector3d k3_p = k3StepCntr[pIdx].deltaPos;
 		Vector3d k4_p = k4StepCntr[pIdx].deltaPos;
-		Vector3d delta_p = (k1_p + 2 * k2_p + 2 * k3_p + k4_p) / 3;
+		Vector3d delta_p = (k1_p + 2 * k2_p + 2 * k3_p + k4_p)/4;
 		p->AddPosition(delta_p);
 		//cout << delta_p.x << " " << delta_p.y << " " << delta_p.z << endl;
 		Vector3d k1_v = k1StepCntr[pIdx].deltaVel;
 		Vector3d k2_v = k2StepCntr[pIdx].deltaVel;
 		Vector3d k3_v = k3StepCntr[pIdx].deltaVel;
 		Vector3d k4_v = k4StepCntr[pIdx].deltaVel;
-		Vector3d delta_v = (k1_v + 2 * k2_v + 2 * k3_v + k4_v) / 3;
+		Vector3d delta_v = (k1_v + 2 * k2_v + 2 * k3_v + k4_v)/4;
 		//cout << delta_v.x << " " << delta_v.y << " " << delta_v.z << endl;
 		p->AddVelocity(delta_v);
 	}

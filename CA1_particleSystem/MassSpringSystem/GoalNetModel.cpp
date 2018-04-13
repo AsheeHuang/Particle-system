@@ -312,6 +312,9 @@ void GoalNet::InitializeParticle()
 					if (j == 0){
 						Particle.AddToNormal(Vector3d::UNIT_Y);
 					}
+					//if (j == m_NumAtHeight - 1){
+					//	Particle.AddToNormal(Vector3d::UNIT_Y);
+					//}
 					
                     m_Particles.push_back(Particle);
                     int cuboidIdx = i*numAtBack + j*m_NumAtLength + k;
